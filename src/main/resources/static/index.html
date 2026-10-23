@@ -1,0 +1,559 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CampusPath | Smart Campus Navigation</title>
+<style>
+:root {
+  --navy: #102342;
+  --blue: #3768f5;
+  --cyan: #54d6ce;
+  --bg: #f3f6fb;
+  --muted: #78869c;
+  --line: #e4eaf3;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--navy);
+}
+button, select { font: inherit; }
+.app { min-height: 100vh; }
+.sidebar {
+  width: 235px;
+  background: var(--navy);
+  color: white;
+  position: fixed;
+  inset: 0 auto 0 0;
+  padding: 27px 18px;
+  display: flex;
+  flex-direction: column;
+  z-index: 2;
+}
+.brand {
+  display: flex; align-items: center; gap: 11px;
+  font-size: 20px; font-weight: 800; margin: 3px 5px 42px;
+}
+.brand-icon {
+  background: var(--blue); width: 39px; height: 39px;
+  display: grid; place-items: center; border-radius: 12px;
+}
+.nav-label {
+  font-size: 10px; color: #94a5c1; letter-spacing: 2px;
+  margin: 0 12px 13px;
+}
+.nav-item {
+  padding: 13px 14px; border-radius: 10px;
+  color: #c4d0e3; margin-bottom: 8px; font-size: 14px;
+}
+.nav-item.active { background: #28416a; color: white; }
+.side-bottom {
+  margin-top: auto; padding: 17px 12px;
+  border: 1px solid #344763; border-radius: 12px;
+  color: #b9c8df; font-size: 12px; line-height: 1.7;
+}
+.side-bottom strong { color: white; display: block; font-size: 13px; }
+.main { margin-left: 235px; }
+.topbar {
+  background: white; height: 76px; display: flex;
+  align-items: center; justify-content: space-between;
+  padding: 0 34px; border-bottom: 1px solid var(--line);
+}
+.topbar small { color: var(--muted); }
+.profile { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.avatar {
+  width: 37px; height: 37px; display: grid; place-items: center;
+  background: #e1eaff; color: var(--blue); border-radius: 50%;
+  font-weight: 800;
+}
+.content { max-width: 1400px; padding: 30px 34px 45px; margin: auto; }
+.eyebrow {
+  color: var(--blue); text-transform: uppercase;
+  letter-spacing: 2px; font-weight: 800; font-size: 10px;
+}
+h1 { font-size: clamp(26px, 3vw, 35px); margin: 9px 0; letter-spacing: -1px; }
+.subtitle { color: var(--muted); margin: 0; font-size: 14px; line-height: 1.6; }
+.stats {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px; margin: 27px 0;
+}
+.stat, .panel {
+  background: white; border: 1px solid var(--line);
+  border-radius: 16px; box-shadow: 0 5px 22px #20385b06;
+}
+.stat { padding: 20px; }
+.stat-top { display: flex; justify-content: space-between; align-items: center; }
+.stat-icon {
+  width: 38px; height: 38px; border-radius: 11px;
+  display: grid; place-items: center; background: #edf2ff; font-size: 19px;
+}
+.stat-label { color: var(--muted); font-size: 12px; }
+.stat-value { font-size: 25px; font-weight: 800; margin-top: 12px; }
+.stat-note { font-size: 11px; color: #8795a9; margin-top: 5px; }
+.layout {
+  display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(270px, 0.9fr);
+  gap: 20px; align-items: start;
+}
+.panel { overflow: hidden; }
+.panel-head {
+  padding: 20px 22px; display: flex; justify-content: space-between;
+  align-items: center; border-bottom: 1px solid var(--line); gap: 12px;
+}
+.panel-head h2 { font-size: 16px; margin: 0 0 5px; }
+.panel-head p { font-size: 11px; color: var(--muted); margin: 0; }
+.pill {
+  background: #e8faf5; color: #13896c; border-radius: 20px;
+  padding: 7px 10px; font-size: 10px; font-weight: 800; white-space: nowrap;
+}
+.map-wrap { padding: 15px; }
+.map {
+  position: relative; width: 100%; aspect-ratio: 1.12;
+  min-height: 330px; max-height: 510px; overflow: hidden;
+  border-radius: 12px; background: #edf4e9;
+}
+.map svg { width: 100%; height: 100%; display: block; }
+.map-label {
+  font: 12px "Segoe UI", Arial, sans-serif;
+  fill: #43516a; text-anchor: middle; font-weight: 650;
+}
+.map-small { font-size: 10px; fill: #748198; text-anchor: middle; }
+.node { cursor: pointer; }
+.node circle { fill: white; stroke: #90a0b7; stroke-width: 2.5; }
+.node text { pointer-events: none; }
+.node.selected circle { fill: var(--blue); stroke: white; stroke-width: 4; }
+.node.selected .map-label { fill: #173b8f; font-weight: 800; }
+.node.route-node circle { fill: var(--cyan); stroke: white; stroke-width: 3; }
+.node.route-node .map-label { fill: #086b65; }
+.map-legend {
+  display: flex; flex-wrap: wrap; gap: 14px; padding: 15px 5px 3px;
+  color: var(--muted); font-size: 11px;
+}
+.legend-dot {
+  width: 9px; height: 9px; display: inline-block;
+  border-radius: 50%; margin-right: 5px;
+}
+.controls { padding: 22px; }
+.controls h2 { font-size: 17px; margin: 0 0 7px; }
+.controls > p { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 0 0 22px; }
+label { display: block; font-size: 12px; font-weight: 750; margin: 16px 0 8px; }
+.select-wrap { position: relative; }
+select {
+  width: 100%; border: 1px solid #dce4f0; border-radius: 9px;
+  background: white; color: var(--navy); padding: 13px 11px;
+  outline: none;
+}
+select:focus { border-color: var(--blue); }
+.route-endpoints {
+  display: flex; align-items: center; gap: 10px; margin-top: 8px;
+}
+.route-endpoints span { font-size: 10px; color: var(--muted); }
+.action-row { display: flex; gap: 9px; margin-top: 21px; }
+button {
+  border: 0; border-radius: 9px; cursor: pointer;
+  padding: 13px 12px; font-weight: 750; font-size: 12px;
+  transition: transform .15s, background .15s;
+}
+button:active { transform: scale(.98); }
+.primary { background: var(--blue); color: white; flex: 1; }
+.primary:hover { background: #2454e0; }
+.secondary { background: #edf2fb; color: #36527c; }
+.route-result { padding: 20px 22px; border-top: 1px solid var(--line); }
+.result-title { font-size: 13px; font-weight: 800; margin-bottom: 12px; }
+.empty {
+  color: var(--muted); background: #f6f8fc; border-radius: 10px;
+  padding: 14px; font-size: 12px; line-height: 1.7;
+}
+.metric {
+  background: #edf5ff; border-radius: 12px; padding: 15px;
+  margin-bottom: 15px;
+}
+.metric small { color: #62789a; font-size: 11px; }
+.metric strong { display: block; font-size: 29px; margin-top: 5px; }
+.metric span { color: #6f83a1; font-size: 11px; }
+.steps { list-style: none; padding: 0; margin: 0; }
+.steps li {
+  display: flex; gap: 11px; padding: 11px 0;
+  border-bottom: 1px solid #edf0f5; font-size: 12px; line-height: 1.5;
+}
+.steps li:last-child { border-bottom: 0; }
+.step-number {
+  flex-shrink: 0; width: 25px; height: 25px; border-radius: 50%;
+  background: #eaf0ff; color: var(--blue); display: grid;
+  place-items: center; font-weight: 800; font-size: 10px;
+}
+.steps small { display: block; color: var(--muted); margin-top: 3px; }
+.bottom-panel { margin-top: 20px; padding: 21px 23px; }
+.bottom-panel h2 { font-size: 15px; margin: 0 0 8px; }
+.bottom-panel p { color: var(--muted); font-size: 12px; line-height: 1.8; margin: 0; }
+footer { text-align: center; color: #98a4b7; font-size: 11px; padding: 28px 5px 0; }
+@media(max-width:1050px) {
+  .sidebar { width: 190px; }
+  .main { margin-left: 190px; }
+  .content { padding: 25px 20px; }
+  .topbar { padding: 0 22px; }
+  .layout { grid-template-columns: 1fr; }
+  .map { aspect-ratio: 1.3; }
+}
+@media(max-width:650px) {
+  .sidebar { position: static; width: 100%; padding: 14px 16px; }
+  .brand { margin: 0; }
+  .sidebar .nav-label, .sidebar .nav-item, .side-bottom { display: none; }
+  .main { margin: 0; }
+  .topbar { height: 60px; padding: 0 17px; }
+  .content { padding: 23px 14px; }
+  .stats { gap: 9px; margin: 20px 0; }
+  .stat { padding: 12px 10px; }
+  .stat-value { font-size: 20px; }
+  .stat-note { font-size: 9px; }
+  .stat-label { font-size: 10px; }
+  .stat-icon { width: 30px; height: 30px; font-size: 15px; }
+  .map-wrap { padding: 8px; }
+  .map { min-height: 290px; }
+  .panel-head, .controls, .route-result { padding: 17px; }
+  .map-label { font-size: 11px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-icon">⌖</span> CampusPath</div>
+    <div class="nav-label">WORKSPACE</div>
+    <div class="nav-item active">⌂ &nbsp; Campus navigation</div>
+    <div class="nav-item">⌁ &nbsp; Shortest routes</div>
+    <div class="nav-item">◎ &nbsp; Campus locations</div>
+    <div class="side-bottom">
+      <strong>SMART CAMPUS SYSTEM</strong>
+      Graph-powered route planning<br>
+      <span style="color:#54d6ce">●</span> Demo campus network
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <small>Workspace / <strong style="color:#263c5e">Navigation</strong></small>
+      <div class="profile"><span class="avatar">CP</span><span>Campus Explorer</span></div>
+    </header>
+
+    <section class="content">
+      <div class="eyebrow">CAMPUS INTELLIGENCE</div>
+      <h1>Find your way around campus.</h1>
+      <p class="subtitle">Explore campus locations and calculate the shortest route between buildings.</p>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-top"><span class="stat-label">CAMPUS LOCATIONS</span><span class="stat-icon">⌖</span></div>
+          <div class="stat-value" id="locationCount">5</div>
+          <div class="stat-note">Connected destinations</div>
+        </div>
+        <div class="stat">
+          <div class="stat-top"><span class="stat-label">ROUTE DISTANCE</span><span class="stat-icon">↗</span></div>
+          <div class="stat-value" id="distanceStat">—</div>
+          <div class="stat-note">Metres along shortest route</div>
+        </div>
+        <div class="stat">
+          <div class="stat-top"><span class="stat-label">ROUTE STOPS</span><span class="stat-icon">◎</span></div>
+          <div class="stat-value" id="stopsStat">—</div>
+          <div class="stat-note">Locations on your route</div>
+        </div>
+      </div>
+
+      <div class="layout">
+        <section class="panel">
+          <div class="panel-head">
+            <div><h2>Campus map</h2><p>Illustrative map of connected campus buildings</p></div>
+            <span class="pill">● MAP VIEW</span>
+          </div>
+          <div class="map-wrap">
+            <div class="map">
+              <svg id="campusMap" viewBox="0 0 600 510" role="img" aria-label="Illustrated campus map with connected buildings">
+                <defs>
+                  <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+                    <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#dce8d6" stroke-width="1"/>
+                  </pattern>
+                </defs>
+                <rect width="600" height="510" fill="#edf4e9"/>
+                <rect width="600" height="510" fill="url(#grid)"/>
+                <path d="M-20 415 Q120 380 210 430 T420 415 T640 440" fill="none" stroke="#d2dfca" stroke-width="65"/>
+                <path d="M-20 415 Q120 380 210 430 T420 415 T640 440" fill="none" stroke="#fffdf5" stroke-width="49"/>
+                <path d="M60 -20 L85 160 L250 240 L375 320 L540 490" fill="none" stroke="#d2dfca" stroke-width="43"/>
+                <path d="M60 -20 L85 160 L250 240 L375 320 L540 490" fill="none" stroke="#fffdf5" stroke-width="29"/>
+                <path d="M520 -20 L430 100 L250 240 L115 310 L20 350" fill="none" stroke="#d2dfca" stroke-width="36"/>
+                <path d="M520 -20 L430 100 L250 240 L115 310 L20 350" fill="none" stroke="#fffdf5" stroke-width="24"/>
+                <g fill="#d7e8cd">
+                  <rect x="130" y="45" width="80" height="45" rx="8"/>
+                  <rect x="355" y="150" width="92" height="43" rx="8"/>
+                  <rect x="440" y="330" width="90" height="40" rx="8"/>
+                  <rect x="125" y="335" width="76" height="36" rx="8"/>
+                  <circle cx="290" cy="80" r="25"/>
+                  <circle cx="485" cy="240" r="30"/>
+                </g>
+                <g id="edgeLayer">
+                  <line x1="85" y1="160" x2="250" y2="240" stroke="#bdc8d8" stroke-width="5" stroke-linecap="round"/>
+                  <line x1="85" y1="160" x2="430" y2="100" stroke="#bdc8d8" stroke-width="5" stroke-linecap="round"/>
+                  <line x1="250" y1="240" x2="430" y2="100" stroke="#bdc8d8" stroke-width="5" stroke-linecap="round"/>
+                  <line x1="250" y1="240" x2="375" y2="320" stroke="#bdc8d8" stroke-width="5" stroke-linecap="round"/>
+                  <line x1="375" y1="320" x2="430" y2="100" stroke="#bdc8d8" stroke-width="5" stroke-linecap="round"/>
+                  <line x1="430" y1="100" x2="500" y2="420" stroke="#bdc8d8" stroke-width="5" stroke-linecap="round"/>
+                  <line x1="250" y1="240" x2="500" y2="420" stroke="#bdc8d8" stroke-width="5" stroke-linecap="round"/>
+                </g>
+                <g id="routeLayer"></g>
+                <g id="nodeLayer">
+                  <g class="node" data-place="Main Gate" transform="translate(85 160)">
+                    <circle r="10"/><text class="map-label" y="-20">Main Gate</text><text class="map-small" y="27">ENTRY</text>
+                  </g>
+                  <g class="node" data-place="Library" transform="translate(250 240)">
+                    <circle r="10"/><text class="map-label" y="-20">Library</text>
+                  </g>
+                  <g class="node" data-place="CSE Block" transform="translate(430 100)">
+                    <circle r="10"/><text class="map-label" y="-20">CSE Block</text>
+                  </g>
+                  <g class="node" data-place="Canteen" transform="translate(375 320)">
+                    <circle r="10"/><text class="map-label" y="-20">Canteen</text>
+                  </g>
+                  <g class="node" data-place="Admin Block" transform="translate(500 420)">
+                    <circle r="10"/><text class="map-label" y="-20">Admin Block</text>
+                  </g>
+                </g>
+                <text x="20" y="30" fill="#72856e" font-size="10" letter-spacing="2">CAMPUS AREA</text>
+              </svg>
+            </div>
+            <div class="map-legend">
+              <span><i class="legend-dot" style="background:#3768f5"></i>Start / destination</span>
+              <span><i class="legend-dot" style="background:#54d6ce"></i>Selected route</span>
+              <span><i class="legend-dot" style="background:#bdc8d8"></i>Campus path</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div><h2>Plan your journey</h2><p>Choose two locations to get started</p></div>
+            <span style="font-size:21px">⌁</span>
+          </div>
+          <div class="controls">
+            <h2>Where do you want to go?</h2>
+            <p>The route finder uses Dijkstra's algorithm to find the minimum-distance path through the campus graph.</p>
+
+            <label for="start">STARTING POINT</label>
+            <div class="select-wrap">
+              <select id="start"><option value="">Loading locations...</option></select>
+            </div>
+            <div class="route-endpoints"><span style="color:#3768f5">●</span><span>Journey begins here</span></div>
+
+            <label for="end">DESTINATION</label>
+            <select id="end"><option value="">Loading locations...</option></select>
+            <div class="route-endpoints"><span style="color:#13aa92">●</span><span>Your destination</span></div>
+
+            <div class="action-row">
+              <button class="primary" id="findBtn" onclick="findRoute()">⌁ &nbsp; Find shortest route</button>
+              <button class="secondary" onclick="resetRoute()" title="Reset route">↺</button>
+            </div>
+          </div>
+          <div class="route-result">
+            <div class="result-title">YOUR JOURNEY</div>
+            <div id="resultContent" class="empty" aria-live="polite">Choose a start and destination, then calculate your shortest route.</div>
+          </div>
+        </section>
+      </div>
+
+      <section class="panel bottom-panel">
+        <h2>About the navigation algorithm</h2>
+        <p>The campus is represented as a weighted, undirected graph. Each building is a vertex and each connecting path is an edge weighted by distance in metres. Dijkstra's shortest-path algorithm calculates the minimum-distance route using the Java backend.</p>
+      </section>
+      <footer>CampusPath · Smart Campus Navigation System · Built with Java, Spring Boot & Dijkstra's Algorithm</footer>
+    </section>
+  </main>
+</div>
+
+<script>
+const fallbackLocations = [
+  "Main Gate", "Library", "CSE Block", "Canteen", "Admin Block"
+];
+
+let locations = [...fallbackLocations];
+let currentRoute = [];
+
+const positions = {
+  "Main Gate": [85, 160],
+  "Library": [250, 240],
+  "CSE Block": [430, 100],
+  "Canteen": [375, 320],
+  "Admin Block": [500, 420]
+};
+
+async function loadLocations() {
+  try {
+    const response = await fetch("/api/locations");
+    if (!response.ok) throw new Error("API unavailable");
+    const data = await response.json();
+    if (Array.isArray(data) && data.length) locations = data;
+  } catch (error) {
+    // Keep the known demo locations visible; route calculation still uses Java.
+  }
+
+  ["start", "end"].forEach(id => {
+    const select = document.getElementById(id);
+    select.innerHTML = '<option value="">Choose a location</option>';
+    locations.forEach(place => {
+      const option = document.createElement("option");
+      option.value = place;
+      option.textContent = place;
+      select.appendChild(option);
+    });
+  });
+  document.getElementById("locationCount").textContent = locations.length;
+}
+
+function clearMapRoute() {
+  document.getElementById("routeLayer").innerHTML = "";
+  document.querySelectorAll(".node").forEach(node => {
+    node.classList.remove("selected", "route-node");
+  });
+}
+
+function drawRoute(route, start, end) {
+  clearMapRoute();
+  const routeLayer = document.getElementById("routeLayer");
+  const ns = "http://www.w3.org/2000/svg";
+
+  for (let i = 0; i < route.length - 1; i++) {
+    const a = positions[route[i]];
+    const b = positions[route[i + 1]];
+    if (!a || !b) continue;
+
+    const under = document.createElementNS(ns, "line");
+    under.setAttribute("x1", a[0]); under.setAttribute("y1", a[1]);
+    under.setAttribute("x2", b[0]); under.setAttribute("y2", b[1]);
+    under.setAttribute("stroke", "#ffffff");
+    under.setAttribute("stroke-width", "13");
+    under.setAttribute("stroke-linecap", "round");
+    routeLayer.appendChild(under);
+
+    const line = document.createElementNS(ns, "line");
+    line.setAttribute("x1", a[0]); line.setAttribute("y1", a[1]);
+    line.setAttribute("x2", b[0]); line.setAttribute("y2", b[1]);
+    line.setAttribute("stroke", "#27bba9");
+    line.setAttribute("stroke-width", "7");
+    line.setAttribute("stroke-linecap", "round");
+    routeLayer.appendChild(line);
+  }
+
+  document.querySelectorAll(".node").forEach(node => {
+    const place = node.dataset.place;
+    if (place === start || place === end) node.classList.add("selected");
+    else if (route.includes(place)) node.classList.add("route-node");
+  });
+}
+
+function showError(message) {
+  const box = document.getElementById("resultContent");
+  box.className = "empty";
+  box.textContent = message;
+}
+
+async function findRoute() {
+  const start = document.getElementById("start").value;
+  const end = document.getElementById("end").value;
+
+  if (!start || !end) {
+    showError("Please select both a starting point and a destination.");
+    return;
+  }
+
+  if (start === end) {
+    currentRoute = [start];
+    drawRoute(currentRoute, start, end);
+    document.getElementById("distanceStat").textContent = "0 m";
+    document.getElementById("stopsStat").textContent = "1";
+    showJourney(currentRoute, 0);
+    return;
+  }
+
+  const button = document.getElementById("findBtn");
+  button.disabled = true;
+  button.textContent = "Calculating...";
+
+  try {
+    const url = "/api/route?start=" + encodeURIComponent(start)
+              + "&end=" + encodeURIComponent(end);
+    const response = await fetch(url);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || "No route found.");
+
+    currentRoute = data.route;
+    drawRoute(currentRoute, start, end);
+    document.getElementById("distanceStat").textContent = data.distance + " m";
+    document.getElementById("stopsStat").textContent = currentRoute.length;
+    showJourney(currentRoute, data.distance);
+  } catch (error) {
+    showError("Could not calculate the route. Make sure the Java server is running, then try again.");
+  } finally {
+    button.disabled = false;
+    button.innerHTML = "⌁ &nbsp; Find shortest route";
+  }
+}
+
+function showJourney(route, distance) {
+  const box = document.getElementById("resultContent");
+  box.className = "";
+  box.innerHTML = "";
+
+  const metric = document.createElement("div");
+  metric.className = "metric";
+  const small = document.createElement("small");
+  small.textContent = "TOTAL TRAVEL DISTANCE";
+  const strong = document.createElement("strong");
+  strong.textContent = distance + " m";
+  const span = document.createElement("span");
+  span.textContent = "Shortest distance calculated by Dijkstra's algorithm";
+  metric.append(small, strong, span);
+  box.appendChild(metric);
+
+  const title = document.createElement("div");
+  title.className = "result-title";
+  title.textContent = "DIRECTIONS";
+  box.appendChild(title);
+
+  const list = document.createElement("ol");
+  list.className = "steps";
+
+  route.forEach((place, index) => {
+    const item = document.createElement("li");
+    const number = document.createElement("span");
+    number.className = "step-number";
+    number.textContent = index + 1;
+    const description = document.createElement("div");
+    const name = document.createElement("strong");
+    name.textContent = place;
+    const detail = document.createElement("small");
+    detail.textContent = index === 0 ? "Start your journey here"
+      : index === route.length - 1 ? "You have arrived"
+      : "Continue along the campus path";
+    description.append(name, detail);
+    item.append(number, description);
+    list.appendChild(item);
+  });
+  box.appendChild(list);
+}
+
+function resetRoute() {
+  document.getElementById("start").value = "";
+  document.getElementById("end").value = "";
+  document.getElementById("distanceStat").textContent = "—";
+  document.getElementById("stopsStat").textContent = "—";
+  currentRoute = [];
+  clearMapRoute();
+  showError("Choose a start and destination, then calculate your shortest route.");
+}
+
+loadLocations();
+</script>
+</body>
+</html>
+
+
